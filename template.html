@@ -181,8 +181,10 @@ if (data.length) {
   const pctScale = {min:0,max:100,grid:{color:'#1e1e2e'},ticks:{color:'#666',callback:v=>v+'%'}};
   const burnYScale = {grid:{color:'#1e1e2e'},ticks:{color:'#666',callback:v=>v.toFixed(1)+'%/h'}};
 
-  // 5h x-axis (simple)
-  function xScale5h(start, end) { return {x:{...timeScale,min:start,max:end}}; }
+  // 5h x-axis (hourly gridlines)
+  function xScale5h(start, end) {
+    return {x:{...timeScale,min:start,max:end,time:{...timeScale.time,unit:'hour',stepSize:1,displayFormats:{hour:'HH:mm'}},grid:{color:'#2a2a3a',lineWidth:1}}};
+  }
 
   // 7d x-axis (major daily grid + minor 3h grid)
   function xScale7d(start, end) {
