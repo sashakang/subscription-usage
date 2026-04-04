@@ -13,9 +13,9 @@
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>__HOME__/.claude/projects/claude-usage-dashboard/launchd-stdout.log</string>
+    <string>__HOME__/Library/Logs/claude-usage-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>__HOME__/.claude/projects/claude-usage-dashboard/launchd-stderr.log</string>
+    <string>__HOME__/Library/Logs/claude-usage-stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
