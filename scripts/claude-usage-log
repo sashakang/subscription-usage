@@ -54,12 +54,14 @@ RAW=$(curl -s --max-time 10 "https://api.anthropic.com/api/oauth/usage" \
 
 # Rotate old records (>7d) before appending — safe because this is the sole writer
 # Then append the new record. Both operations in one Python call to avoid gaps.
-echo "$RAW" | python3 - "$LOG_FILE" <<'PYEOF'
+# Pass API response via env var (not stdin — heredoc uses stdin for the script source)
+export CLAUDE_RAW="$RAW"
+python3 - "$LOG_FILE" <<'PYEOF'
 import json, sys, os, tempfile
 from datetime import datetime, timezone, timedelta
 
 log_file = sys.argv[1]
-raw = sys.stdin.read()
+raw = os.environ.get('CLAUDE_RAW', '')
 cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
 # Parse new record
