@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Usage Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
+    background: #111118;
+    color: #e0e0e0;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 { text-align: center; font-size: 1.6em; margin-bottom: 8px; color: #fff; }
+  .subtitle { text-align: center; color: #666; font-size: 0.85em; margin-bottom: 24px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 24px; max-width: 1000px; margin-left: auto; margin-right: auto;
+  }
+  .card {
+    background: #1a1a24; border: 1px solid #2a2a3a; border-radius: 12px;
+    padding: 20px; text-align: center;
+  }
+  .card .label { color: #888; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; }
+  .card .value { font-size: 2.4em; font-weight: 700; margin: 8px 0 4px; }
+  .card .detail { color: #666; font-size: 0.8em; }
+  .green { color: #4ade80; } .yellow { color: #fbbf24; } .red { color: #f87171; }
+  .bar-wrap { width:100%; height:8px; background:#2a2a3a; border-radius:4px; margin-top:8px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:4px; transition: width 0.5s ease; }
+  .chart-box {
+    background: #1a1a24; border: 1px solid #2a2a3a; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; max-width: 1000px; margin-left: auto; margin-right: auto;
+  }
+  .chart-title { font-size: 1em; font-weight: 600; margin-bottom: 12px; color: #ccc; }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap-sm { position: relative; height: 180px; }
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; max-width: 1000px; margin: 0 auto 16px;
+  }
+  .stat-box {
+    background: #1a1a24; border: 1px solid #2a2a3a; border-radius: 8px;
+    padding: 12px 16px; font-size: 0.85em;
+  }
+  .stat-box .sl { color: #888; font-size: 0.75em; text-transform: uppercase; }
+  .stat-box .sv { font-size: 1.3em; font-weight: 600; margin-top: 2px; }
+  .alert {
+    background: #2d1b1b; border: 1px solid #7f1d1d; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 16px; max-width: 1000px;
+    margin-left: auto; margin-right: auto; color: #fca5a5; display: none;
+  }
+  .alert.show { display: block; }
+  .footer { text-align: center; color: #555; font-size: 0.75em; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<h1>⚡ Claude Usage Dashboard</h1>
+<div class="subtitle">Static file · Rebuilt every 5 min by launchd</div>
+
+<div id="alert" class="alert">⚠️ <span id="alert-text"></span></div>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Session (5h)</div>
+    <div class="value" id="s-val">--</div>
+    <div class="detail" id="s-det"></div>
+    <div class="bar-wrap"><div class="bar-fill" id="s-bar"></div></div>
+  </div>
+  <div class="card">
+    <div class="label">Weekly (All)</div>
+    <div class="value" id="w-val">--</div>
+    <div class="detail" id="w-det"></div>
+    <div class="bar-wrap"><div class="bar-fill" id="w-bar"></div></div>
+  </div>
+  <div class="card">
+    <div class="label">Sonnet (Weekly)</div>
+    <div class="value" id="sn-val">--</div>
+    <div class="detail" id="sn-det"></div>
+    <div class="bar-wrap"><div class="bar-fill" id="sn-bar"></div></div>
+  </div>
+  <div class="card">
+    <div class="label">Data Points</div>
+    <div class="value" id="dp-val">--</div>
+    <div class="detail" id="dp-det"></div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-box"><div class="sl">Burn Rate (weekly/hr)</div><div class="sv" id="burn">--</div></div>
+  <div class="stat-box"><div class="sl">Est. Weekly Exhaustion</div><div class="sv" id="exhaust">--</div></div>
+  <div class="stat-box"><div class="sl">Peak Session Usage</div><div class="sv" id="peak">--</div></div>
+  <div class="stat-box"><div class="sl">Weekly Reset</div><div class="sv" id="reset">--</div></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">⏱ Session (5h Window)</div>
+  <div class="chart-wrap"><canvas id="sessionChart"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">📅 Weekly (7d Window)</div>
+  <div class="chart-wrap"><canvas id="weeklyChart"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">💎 Sonnet (Weekly)</div>
+  <div class="chart-wrap"><canvas id="sonnetChart"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">🔥 Session Burn Rate (%/h)</div>
+  <div class="chart-wrap-sm"><canvas id="burnSessionChart"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">🔥 Weekly Burn Rate (%/h)</div>
+  <div class="chart-wrap-sm"><canvas id="burnWeeklyChart"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <div class="chart-title">🔥 Sonnet Burn Rate (%/h)</div>
+  <div class="chart-wrap-sm"><canvas id="burnSonnetChart"></canvas></div>
+</div>
+
+<div class="footer" id="footer"></div>
+
+<script>
+const data = __DATA_PLACEHOLDER__;
+if (!data.length) { document.getElementById('footer').textContent = 'No data yet'; }
+
+function col(p) { return p < 50 ? '#4ade80' : p < 80 ? '#fbbf24' : '#f87171'; }
+function cls(p) { return p < 50 ? 'green' : p < 80 ? 'yellow' : 'red'; }
+function ttl(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso) - new Date(); if (d < 0) return 'expired';
+  const h = d/3600000; return h > 24 ? (h/24).toFixed(1)+'d' : Math.floor(h)+'h '+Math.floor((d%3600000)/60000)+'m';
+}
+
+if (data.length) {
+  const L = data[data.length-1];
+  [{id:'s',v:L.five_hour,r:L.five_hour_resets},{id:'w',v:L.seven_day,r:L.seven_day_resets},{id:'sn',v:L.sonnet,r:L.seven_day_resets}].forEach(x => {
+    const p = x.v ?? 0, left = 100-p;
+    const el = document.getElementById(x.id+'-val'); el.textContent = left.toFixed(0)+'%'; el.className = 'value '+cls(p);
+    document.getElementById(x.id+'-det').textContent = p+'% used · resets '+ttl(x.r);
+    const b = document.getElementById(x.id+'-bar'); b.style.width = p+'%'; b.style.background = col(p);
+  });
+  document.getElementById('dp-val').textContent = data.length;
+  const spanH = ((new Date(L.ts)-new Date(data[0].ts))/3600000).toFixed(1);
+  document.getElementById('dp-det').textContent = 'over '+spanH+'h';
+
+  // Alert
+  if (L.seven_day >= 80) { document.getElementById('alert-text').textContent = 'CRITICAL: Weekly at '+L.seven_day+'%!'; document.getElementById('alert').className = 'alert show'; }
+  else if (L.seven_day >= 50) { document.getElementById('alert-text').textContent = 'Warning: Weekly at '+L.seven_day+'%'; document.getElementById('alert').className = 'alert show'; }
+
+  // Stats
+  const rec = data.slice(-12);
+  if (rec.length >= 2) {
+    const hrs = (new Date(rec[rec.length-1].ts)-new Date(rec[0].ts))/3600000;
+    const delta = (rec[rec.length-1].seven_day??0)-(rec[0].seven_day??0);
+    const rate = hrs > 0 ? delta/hrs : 0;
+    document.getElementById('burn').textContent = rate.toFixed(2)+'%/h';
+    document.getElementById('burn').className = 'sv '+cls(rate*168>100?80:rate*24>5?50:0);
+    if (rate > 0) {
+      const hLeft = (100-(L.seven_day??0))/rate;
+      document.getElementById('exhaust').textContent = hLeft > 168 ? 'Never (within reset)' : new Date(Date.now()+hLeft*3600000).toLocaleDateString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+      document.getElementById('exhaust').className = 'sv '+(hLeft<24?'red':hLeft<72?'yellow':'green');
+    } else { document.getElementById('exhaust').textContent = 'No burn'; document.getElementById('exhaust').className = 'sv green'; }
+  }
+  document.getElementById('peak').textContent = Math.max(...data.map(d=>d.five_hour??0))+'%';
+  document.getElementById('peak').className = 'sv '+cls(Math.max(...data.map(d=>d.five_hour??0)));
+  document.getElementById('reset').textContent = ttl(L.seven_day_resets);
+
+  // Charts — shared options
+  const timeScale = {type:'time',time:{tooltipFormat:'MMM d, HH:mm'},grid:{color:'#1e1e2e'},ticks:{color:'#666'}};
+  const pctScale = {min:0,max:100,grid:{color:'#1e1e2e'},ticks:{color:'#666',callback:v=>v+'%'}};
+  const chartOpts = {responsive:true, maintainAspectRatio:false, scales:{x:timeScale,y:pctScale}, plugins:{legend:{display:false}}};
+  const labels = data.map(d=>new Date(d.ts));
+
+  // Session (5h) — scoped to the 5h window; skip if no active session
+  if (L.five_hour_resets) {
+    const sEnd = new Date(L.five_hour_resets);
+    const sStart = new Date(sEnd - 5*3600000);
+    const s5h = data.filter(d => { const t = new Date(d.ts); return t >= sStart && t <= sEnd; });
+    new Chart(document.getElementById('sessionChart'), {
+      type:'line', data: {
+        labels: [sStart, ...s5h.map(d=>new Date(d.ts)), sEnd],
+        datasets: [
+          {label:'Session (5h)',data:[null, ...s5h.map(d=>d.five_hour??0), null],borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.1)',fill:true,tension:0.3,pointRadius:2},
+          {label:'Linear pace',data:[0, ...s5h.map(()=>null), 100],borderColor:'#ffffff55',borderDash:[6,4],borderWidth:1,pointRadius:0,fill:false,tension:0,spanGaps:true}
+        ]
+      }, options: {...chartOpts, scales:{x:{...timeScale,min:sStart,max:sEnd},y:{...pctScale}}}
+    });
+  }
+
+  // Weekly — scoped to the 7d window; skip if no active window
+  if (L.seven_day_resets) {
+    const wEnd = new Date(L.seven_day_resets);
+    const wStart = new Date(wEnd - 7*24*3600000);
+    const w7d = data.filter(d => { const t = new Date(d.ts); return t >= wStart && t <= wEnd; });
+    new Chart(document.getElementById('weeklyChart'), {
+      type:'line', data: {
+        labels: [wStart, ...w7d.map(d=>new Date(d.ts)), wEnd],
+        datasets: [
+          {label:'Weekly',data:[null, ...w7d.map(d=>d.seven_day??0), null],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',fill:true,tension:0.3,pointRadius:2},
+          {label:'Linear pace',data:[0, ...w7d.map(()=>null), 100],borderColor:'#ffffff55',borderDash:[6,4],borderWidth:1,pointRadius:0,fill:false,tension:0,spanGaps:true}
+        ]
+      }, options: {...chartOpts, scales:{
+        x:{...timeScale,min:wStart,max:wEnd,time:{...timeScale.time,unit:'hour',stepSize:3,displayFormats:{hour:'HH:mm'}},grid:{color:'#1e1e2e',lineWidth:1},ticks:{color:'#555',font:{size:9}}},
+        x2:{type:'time',position:'bottom',min:wStart,max:wEnd,time:{unit:'day',displayFormats:{day:'EEE d'},tooltipFormat:'MMM d'},grid:{color:'#2a2a3a',lineWidth:2,drawTicks:true},ticks:{color:'#888',font:{size:11,weight:'bold'}}},
+        y:{...pctScale}
+      }}
+    });
+  }
+
+  // Sonnet — same 7d window as weekly
+  if (L.seven_day_resets) {
+    const snEnd = new Date(L.seven_day_resets);
+    const snStart = new Date(snEnd - 7*24*3600000);
+    const sn7d = data.filter(d => { const t = new Date(d.ts); return t >= snStart && t <= snEnd; });
+    new Chart(document.getElementById('sonnetChart'), {
+      type:'line', data: {
+        labels: [snStart, ...sn7d.map(d=>new Date(d.ts)), snEnd],
+        datasets: [
+          {label:'Sonnet',data:[null, ...sn7d.map(d=>d.sonnet??0), null],borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.1)',fill:true,tension:0.3,pointRadius:2},
+          {label:'Linear pace',data:[0, ...sn7d.map(()=>null), 100],borderColor:'#ffffff55',borderDash:[6,4],borderWidth:1,pointRadius:0,fill:false,tension:0,spanGaps:true}
+        ]
+      }, options: {...chartOpts, scales:{
+        x:{...timeScale,min:snStart,max:snEnd,time:{...timeScale.time,unit:'hour',stepSize:3,displayFormats:{hour:'HH:mm'}},grid:{color:'#1e1e2e',lineWidth:1},ticks:{color:'#555',font:{size:9}}},
+        x2:{type:'time',position:'bottom',min:snStart,max:snEnd,time:{unit:'day',displayFormats:{day:'EEE d'},tooltipFormat:'MMM d'},grid:{color:'#2a2a3a',lineWidth:2,drawTicks:true},ticks:{color:'#888',font:{size:11,weight:'bold'}}},
+        y:{...pctScale}
+      }}
+    });
+  }
+
+  // Burn rates — skip gaps longer than 30min to avoid fake spikes after sleep/downtime
+  const MAX_GAP_H = 0.5;
+  const rates = [];
+  for (let i=1;i<data.length;i++) {
+    const dt=(new Date(data[i].ts)-new Date(data[i-1].ts))/3600000;
+    if(dt<=0 || dt>MAX_GAP_H)continue;
+    const sDelta = (data[i].five_hour??0)-(data[i-1].five_hour??0);
+    const wDelta = (data[i].seven_day??0)-(data[i-1].seven_day??0);
+    const snDelta = (data[i].sonnet??0)-(data[i-1].sonnet??0);
+    rates.push({ts:data[i].ts, session: sDelta > 0 ? sDelta/dt : 0, weekly: wDelta > 0 ? wDelta/dt : 0, sonnet: snDelta > 0 ? snDelta/dt : 0});
+  }
+  const burnYScale = {grid:{color:'#1e1e2e'},ticks:{color:'#666',callback:v=>v.toFixed(1)+'%/h'}};
+
+  // Session burn — scoped to 5h window
+  if (L.five_hour_resets) {
+    const bsEnd = new Date(L.five_hour_resets);
+    const bsStart = new Date(bsEnd - 5*3600000);
+    const bsRates = rates.filter(r => { const t = new Date(r.ts); return t >= bsStart && t <= bsEnd; });
+    new Chart(document.getElementById('burnSessionChart'), {
+      type:'line', data: {
+        labels:bsRates.map(r=>new Date(r.ts)),
+        datasets:[{label:'Session %/h',data:bsRates.map(r=>r.session),borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.1)',fill:true,tension:0,pointRadius:3,pointBackgroundColor:'#60a5fa'}]
+      }, options: {
+        responsive:true, maintainAspectRatio:false,
+        scales:{x:{...timeScale,min:bsStart,max:bsEnd},y:burnYScale},
+        plugins:{legend:{display:false}}
+      }
+    });
+  }
+
+  // Hourly bucket helper: average a field per clock-hour
+  function hourly(arr, field) {
+    const buckets = {};
+    arr.forEach(r => {
+      const d = new Date(r.ts); d.setMinutes(0,0,0);
+      const k = d.getTime();
+      if (!buckets[k]) buckets[k] = {ts:d, sum:0, n:0};
+      buckets[k].sum += r[field]; buckets[k].n++;
+    });
+    return Object.values(buckets).sort((a,b)=>a.ts-b.ts).map(b=>({ts:b.ts, v:b.sum/b.n}));
+  }
+
+  // Weekly burn — scoped to 7d window, hourly
+  if (L.seven_day_resets) {
+    const bwEnd = new Date(L.seven_day_resets);
+    const bwStart = new Date(bwEnd - 7*24*3600000);
+    const bwRates = rates.filter(r => { const t = new Date(r.ts); return t >= bwStart && t <= bwEnd; });
+    const bwH = hourly(bwRates, 'weekly');
+    new Chart(document.getElementById('burnWeeklyChart'), {
+      type:'line', data: {
+        labels:bwH.map(r=>r.ts),
+        datasets:[{label:'Weekly %/h',data:bwH.map(r=>r.v),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',fill:true,tension:0,pointRadius:3,pointBackgroundColor:'#f97316'}]
+      }, options: {
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{...timeScale,min:bwStart,max:bwEnd,time:{...timeScale.time,unit:'hour',stepSize:3,displayFormats:{hour:'HH:mm'}},grid:{color:'#1e1e2e',lineWidth:1},ticks:{color:'#555',font:{size:9}}},
+          x2:{type:'time',position:'bottom',min:bwStart,max:bwEnd,time:{unit:'day',displayFormats:{day:'EEE d'},tooltipFormat:'MMM d'},grid:{color:'#2a2a3a',lineWidth:2,drawTicks:true},ticks:{color:'#888',font:{size:11,weight:'bold'}}},
+          y:burnYScale
+        },
+        plugins:{legend:{display:false}}
+      }
+    });
+  }
+
+  // Sonnet burn — scoped to 7d window
+  if (L.seven_day_resets) {
+    const bnEnd = new Date(L.seven_day_resets);
+    const bnStart = new Date(bnEnd - 7*24*3600000);
+    const bnRates = rates.filter(r => { const t = new Date(r.ts); return t >= bnStart && t <= bnEnd; });
+    const bnH = hourly(bnRates, 'sonnet');
+    new Chart(document.getElementById('burnSonnetChart'), {
+      type:'line', data: {
+        labels:bnH.map(r=>r.ts),
+        datasets:[{label:'Sonnet %/h',data:bnH.map(r=>r.v),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.1)',fill:true,tension:0,pointRadius:3,pointBackgroundColor:'#a78bfa'}]
+      }, options: {
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{...timeScale,min:bnStart,max:bnEnd,time:{...timeScale.time,unit:'hour',stepSize:3,displayFormats:{hour:'HH:mm'}},grid:{color:'#1e1e2e',lineWidth:1},ticks:{color:'#555',font:{size:9}}},
+          x2:{type:'time',position:'bottom',min:bnStart,max:bnEnd,time:{unit:'day',displayFormats:{day:'EEE d'},tooltipFormat:'MMM d'},grid:{color:'#2a2a3a',lineWidth:2,drawTicks:true},ticks:{color:'#888',font:{size:11,weight:'bold'}}},
+          y:burnYScale
+        },
+        plugins:{legend:{display:false}}
+      }
+    });
+  }
+
+  document.getElementById('footer').textContent = 'Last update: '+new Date(L.ts).toLocaleString()+' · '+data.length+' points · File regenerated every 5 min';
+}
+</script>
+</body>
+</html>
