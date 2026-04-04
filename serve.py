@@ -1,39 +1,31 @@
 #!/usr/bin/env python3
 """Minimal server for Claude Usage Dashboard.
-Serves index.html and /data endpoint (JSONL from usage log)."""
+Serves index.html only — no directory listing, no file fallthrough."""
 
 import http.server
 import os
 import sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8766
-DATA_FILE = os.path.expanduser("~/.openclaw/workspace/usage-logs/claude-usage.jsonl")
 HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
-class Handler(http.server.SimpleHTTPRequestHandler):
+class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == "/data":
+        if self.path in ("/", "/index.html"):
             try:
-                with open(DATA_FILE, "r") as f:
+                with open(HTML_FILE, "r") as f:
                     content = f.read()
                 self.send_response(200)
-                self.send_header("Content-Type", "application/x-ndjson")
-                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Type", "text/html")
                 self.end_headers()
                 self.wfile.write(content.encode())
             except FileNotFoundError:
                 self.send_response(404)
                 self.end_headers()
-                self.wfile.write(b'{"error":"no data file"}')
-        elif self.path in ("/", "/index.html"):
-            with open(HTML_FILE, "r") as f:
-                content = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.end_headers()
-            self.wfile.write(content.encode())
+                self.wfile.write(b"Dashboard not built yet. Run: claude-usage-build")
         else:
-            super().do_GET()
+            self.send_response(404)
+            self.end_headers()
 
     def log_message(self, format, *args):
         pass  # quiet

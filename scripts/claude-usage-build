@@ -4,9 +4,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJ_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 LOG_FILE="${1:-$HOME/.openclaw/workspace/usage-logs/claude-usage.jsonl}"
-TEMPLATE="$HOME/Projects/claude-usage-dashboard/template.html"
-DASHBOARD="$HOME/Projects/claude-usage-dashboard/index.html"
+TEMPLATE="$PROJ_DIR/template.html"
+DASHBOARD="$PROJ_DIR/index.html"
 
 if [ ! -f "$TEMPLATE" ]; then
   echo "error: template not found: $TEMPLATE" >&2
@@ -18,16 +21,18 @@ if [ ! -f "$LOG_FILE" ]; then
   exit 1
 fi
 
-python3 -c "
-import json, sys, os
+# Pass all paths via argv, not shell interpolation into Python strings
+python3 - "$LOG_FILE" "$TEMPLATE" "$DASHBOARD" <<'PYEOF'
+import json, sys, os, tempfile
 from datetime import datetime, timezone, timedelta
 
-log_file = '$LOG_FILE'
+log_file, template_file, dashboard_file = sys.argv[1], sys.argv[2], sys.argv[3]
 cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
 lines = open(log_file).read().strip().split('\n')
 keep = []
 archive = []
+skipped = 0
 for l in lines:
     try:
         r = json.loads(l)
@@ -38,33 +43,50 @@ for l in lines:
         else:
             keep.append(r)
     except:
-        pass
+        skipped += 1
 
-# Archive old records
+if skipped:
+    print(f'warning: skipped {skipped} unparseable lines', file=sys.stderr)
+
+# Archive old records — atomic rewrite to avoid race with collector
 if archive:
     archive_dir = os.path.dirname(log_file)
     archive_file = os.path.join(archive_dir, 'claude-usage-archive.jsonl')
     with open(archive_file, 'a') as f:
         f.write('\n'.join(archive) + '\n')
-    # Rewrite active file with only recent records
-    with open(log_file, 'w') as f:
-        for r in keep:
-            f.write(json.dumps(r) + '\n')
+    # Write to temp file then rename (atomic on same filesystem)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(log_file), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            for r in keep:
+                f.write(json.dumps(r) + '\n')
+        os.rename(tmp, log_file)
+    except:
+        os.unlink(tmp)
+        raise
     print(f'Rotated: archived {len(archive)} old records, kept {len(keep)}', file=sys.stderr)
 
 if not keep:
     print('warning: no valid records in data file', file=sys.stderr)
 
 data_json = json.dumps(keep, separators=(',',':'))
-template = open('$TEMPLATE').read()
+template = open(template_file).read()
 
 if '__DATA_PLACEHOLDER__' not in template:
     print('error: __DATA_PLACEHOLDER__ not found in template', file=sys.stderr)
     sys.exit(1)
 
 html = template.replace('__DATA_PLACEHOLDER__', data_json)
-with open('$DASHBOARD', 'w') as f:
-    f.write(html)
 
-print(f'Built dashboard: {len(keep)} records → $DASHBOARD')
-"
+# Atomic write for dashboard too
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dashboard_file), suffix='.tmp')
+try:
+    with os.fdopen(fd, 'w') as f:
+        f.write(html)
+    os.rename(tmp, dashboard_file)
+except:
+    os.unlink(tmp)
+    raise
+
+print(f'Built dashboard: {len(keep)} records → {dashboard_file}')
+PYEOF
