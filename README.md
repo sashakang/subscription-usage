@@ -49,7 +49,7 @@ All pipeline components are in `scripts/`:
 |------|---------|
 | `scripts/claude-usage-log` | Fetches API data, appends to JSONL, triggers build |
 | `scripts/claude-usage-build` | Reads JSONL + template, writes index.html, rotates data (7d retention) |
-| `scripts/com.openclaw.claude-usage-log.plist` | macOS LaunchAgent — runs collector every 5 min |
+| `scripts/com.claude-usage.log.plist` | macOS LaunchAgent — runs collector every 5 min |
 
 ### Install
 
@@ -59,8 +59,8 @@ ln -sf "$(pwd)/scripts/claude-usage-log" ~/.local/bin/claude-usage-log
 ln -sf "$(pwd)/scripts/claude-usage-build" ~/.local/bin/claude-usage-build
 
 # Install LaunchAgent (replaces __HOME__ placeholder with your home dir)
-sed "s|__HOME__|$HOME|g" scripts/com.openclaw.claude-usage-log.plist > ~/Library/LaunchAgents/com.openclaw.claude-usage-log.plist
-launchctl load ~/Library/LaunchAgents/com.openclaw.claude-usage-log.plist
+sed "s|__HOME__|$HOME|g" scripts/com.claude-usage.log.plist > ~/Library/LaunchAgents/com.claude-usage.log.plist
+launchctl load ~/Library/LaunchAgents/com.claude-usage.log.plist
 ```
 
 ## Usage

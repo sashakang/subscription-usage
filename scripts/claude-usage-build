@@ -12,7 +12,7 @@ if [ -f "$SCRIPT_DIR/../template.html" ]; then
   PROJ_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 
-LOG_FILE="${1:-$HOME/.openclaw/workspace/usage-logs/claude-usage.jsonl}"
+LOG_FILE="${1:-$HOME/.claude-usage/claude-usage.jsonl}"
 TEMPLATE="$PROJ_DIR/template.html"
 DASHBOARD="$PROJ_DIR/index.html"
 

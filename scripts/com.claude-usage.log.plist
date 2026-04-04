@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.openclaw.claude-usage-log</string>
+    <string>com.claude-usage.log</string>
     <key>ProgramArguments</key>
     <array>
         <string>__HOME__/.local/bin/claude-usage-log</string>
@@ -13,9 +13,9 @@
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>__HOME__/.openclaw/workspace/usage-logs/launchd-stdout.log</string>
+    <string>__HOME__/.claude-usage/launchd-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>__HOME__/.openclaw/workspace/usage-logs/launchd-stderr.log</string>
+    <string>__HOME__/.claude-usage/launchd-stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
