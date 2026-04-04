@@ -5,12 +5,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJ_DIR="${CLAUDE_DASH_DIR:-$HOME/Projects/claude-usage-dashboard}"
-# If running from the repo's scripts/ dir, use parent
-if [ -f "$SCRIPT_DIR/../template.html" ]; then
-  PROJ_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-fi
+# Resolve symlinks to find the real script location (works when symlinked into PATH)
+REAL_SCRIPT="$(readlink "$0" 2>/dev/null || echo "$0")"
+# Handle relative symlinks
+case "$REAL_SCRIPT" in /*) ;; *) REAL_SCRIPT="$(cd "$(dirname "$0")" && pwd)/$REAL_SCRIPT" ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT")" && pwd)"
+PROJ_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 LOG_FILE="${1:-$HOME/.claude/projects/claude-usage-dashboard/claude-usage.jsonl}"
 TEMPLATE="$PROJ_DIR/template.html"
