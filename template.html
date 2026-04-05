@@ -254,7 +254,7 @@ if (data.length) {
   const rates = [];
   for (let i=1;i<data.length;i++) {
     const dt=(new Date(data[i].ts)-new Date(data[i-1].ts))/3600000;
-    if(dt<=0 || dt>0.5)continue;
+    if(dt<0.05 || dt>0.5)continue; // skip <3min (noisy) and >30min (gaps)
     // Session: look back ~1h for smoothing
     // Detect window resets by five_hour dropping (more robust than comparing resets timestamps)
     let sessionRate = 0;
