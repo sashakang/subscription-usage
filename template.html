@@ -202,13 +202,9 @@ const palette = {
 function getPalette(svc) { return palette[svc] || palette.claude; }
 
 // ── Tab label: "Service (user)" — deduplicate if only one account per service ──
-const serviceCounts = {};
-keys.forEach(k => { const s = groups[k].service; serviceCounts[s] = (serviceCounts[s]||0) + 1; });
 function tabLabel(g) {
   const name = g.service.charAt(0).toUpperCase() + g.service.slice(1);
-  if (serviceCounts[g.service] <= 1) return name;
-  const user = g.account.replace(/@.*/, '');
-  return name + ' (' + user + ')';
+  return g.account === 'default' ? name : name + ' (' + g.account + ')';
 }
 
 // ── Build tabs and content ──
@@ -264,6 +260,23 @@ keys.forEach((key, idx) => {
         <div class="value ${cls(L.sonnet??0)}">${(100-(L.sonnet??0)).toFixed(0)}%</div>
         <div class="detail">${L.sonnet??0}% used · resets ${ttl(L.seven_day_resets)}</div>
         <div class="bar-wrap"><div class="bar-fill" style="width:${L.sonnet??0}%;background:${col(L.sonnet??0)}"></div></div>
+      </div>`;
+  }
+  const hasExtra = L.extra_enabled && L.extra_limit != null;
+  if (hasExtra) {
+    const ep = L.extra_pct ?? 0;
+    const used = (L.extra_used ?? 0) / 100;
+    const limit = (L.extra_limit ?? 0) / 100;
+    // Monthly reset: 1st of next month
+    const now = new Date(L.ts);
+    const resetDate = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    const resetStr = resetDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    cardsHtml += `
+      <div class="card">
+        <div class="label">Extra Usage</div>
+        <div class="value ${cls(ep)}">\$${used.toFixed(2)} / \$${limit.toFixed(2)}</div>
+        <div class="detail">${ep.toFixed(1)}% spent · Resets ${resetStr}</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${ep}%;background:${col(ep)}"></div></div>
       </div>`;
   }
   cardsHtml += `

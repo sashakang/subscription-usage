@@ -141,6 +141,9 @@ records.append({
     'seven_day_resets': d.get('seven_day', {}).get('resets_at'),
     'sonnet': d.get('seven_day_sonnet', {}).get('utilization') if d.get('seven_day_sonnet') else None,
     'extra_enabled': d.get('extra_usage', {}).get('is_enabled', False),
+    'extra_used': d.get('extra_usage', {}).get('used_credits'),
+    'extra_limit': d.get('extra_usage', {}).get('monthly_limit'),
+    'extra_pct': d.get('extra_usage', {}).get('utilization'),
 })
 
 # Codex record (if available)
