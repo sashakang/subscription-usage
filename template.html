@@ -255,8 +255,9 @@ if (data.length) {
   // Alert: warn when usage exceeds linear pace (elapsed/total * 100)
   if (L.seven_day_resets) {
     const resetMs = new Date(L.seven_day_resets).getTime();
+    const sampleMs = new Date(L.ts).getTime();
     const windowMs = 168 * 3600000;
-    const elapsed = windowMs - (resetMs - Date.now());
+    const elapsed = windowMs - (resetMs - sampleMs);
     const linearPace = Math.max(0, Math.min(100, elapsed / windowMs * 100));
     if (L.seven_day > linearPace) {
       document.getElementById('alert-text').textContent = 'Weekly at '+L.seven_day+'% — above pace ('+linearPace.toFixed(0)+'%)';
@@ -383,8 +384,9 @@ if (cxData.length) {
   // Alert: warn when usage exceeds linear pace
   if (CL.codex_seven_day_resets) {
     const resetMs = new Date(CL.codex_seven_day_resets).getTime();
+    const sampleMs = new Date(CL.ts).getTime();
     const windowMs = 168 * 3600000;
-    const elapsed = windowMs - (resetMs - Date.now());
+    const elapsed = windowMs - (resetMs - sampleMs);
     const linearPace = Math.max(0, Math.min(100, elapsed / windowMs * 100));
     if (CL.codex_seven_day > linearPace) {
       document.getElementById('cx-alert-text').textContent = 'Weekly at '+CL.codex_seven_day+'% — above pace ('+linearPace.toFixed(0)+'%)';
