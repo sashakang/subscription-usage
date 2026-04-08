@@ -188,9 +188,10 @@ Object.keys(groups).forEach(key => {
 });
 
 const keys = Object.keys(groups).sort((a,b) => {
-  const la = groups[a].data[groups[a].data.length-1].ts;
-  const lb = groups[b].data[groups[b].data.length-1].ts;
-  return lb.localeCompare(la); // most recent first
+  const ga = groups[a], gb = groups[b];
+  if (ga.service !== gb.service) return ga.service.localeCompare(gb.service); // claude before codex
+  const la = ga.data[ga.data.length-1].ts, lb = gb.data[gb.data.length-1].ts;
+  return lb.localeCompare(la); // most recent first within same service
 });
 if (!keys.length) { document.getElementById('footer').textContent = 'No data yet'; }
 
