@@ -437,7 +437,7 @@ function checkReload() { if (Date.now() - pageLoadTime > RELOAD_MS) location.rel
 setInterval(checkReload, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReload(); });
 window.addEventListener('focus', checkReload);
-document.addEventListener('mousemove', checkReload, {once: true, capture: true});
+document.addEventListener('mousemove', () => { if (Date.now() - pageLoadTime > RELOAD_MS - 60000) checkReload(); });
 </script>
 </body>
 </html>
