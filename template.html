@@ -68,6 +68,7 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 </style>
+<meta http-equiv="refresh" content="600">
 </head>
 <body>
 
@@ -430,7 +431,11 @@ if (keys.length) {
   setInterval(updateAgo, 1000);
   document.getElementById('footer').textContent = totalPts+' points · __VERSION_PLACEHOLDER__';
 }
-setTimeout(() => location.reload(), 10 * 60 * 1000);
+// Auto-reload: meta refresh handles background tabs; visibilitychange catches tab-switch
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - pageLoadTime > 10 * 60 * 1000) location.reload();
+});
+const pageLoadTime = Date.now();
 </script>
 </body>
 </html>
