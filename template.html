@@ -90,6 +90,16 @@ function ttl(iso) {
   const h = d/3600000; return h > 24 ? (h/24).toFixed(1)+'d' : Math.floor(h)+'h '+Math.floor((d%3600000)/60000)+'m';
 }
 function esc(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+const isFile = location.protocol === 'file:';
+function refreshPage() {
+  if (isFile) {
+    const nextUrl = new URL(location.href);
+    nextUrl.searchParams.set('_ts', String(Date.now()));
+    location.replace(nextUrl.href);
+    return;
+  }
+  location.reload();
+}
 
 // ── Chart config ──
 const timeScale = {type:'time',time:{tooltipFormat:'MMM d, HH:mm'},grid:{color:'#1e1e2e'},ticks:{color:'#666'}};
@@ -430,10 +440,10 @@ if (keys.length) {
   setInterval(updateAgo, 1000);
   document.getElementById('footer').textContent = totalPts+' points · __VERSION_PLACEHOLDER__';
 }
-// Auto-reload every 10 min — multiple triggers to handle browser throttling
+// Auto-reload more aggressively for file:// because we cannot poll file mtimes there.
 const pageLoadTime = Date.now();
-const RELOAD_MS = 10 * 60 * 1000;
-function checkReload() { if (Date.now() - pageLoadTime > RELOAD_MS) location.reload(); }
+const RELOAD_MS = isFile ? 60 * 1000 : 10 * 60 * 1000;
+function checkReload() { if (Date.now() - pageLoadTime > RELOAD_MS) refreshPage(); }
 setInterval(checkReload, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReload(); });
 window.addEventListener('focus', checkReload);
